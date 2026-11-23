@@ -15,7 +15,10 @@ enum Ghostscript {
         return nil
     }()
 
-    static var version: String {
+    /// Einmalig ermittelt. Als berechnete Eigenschaft startete das bei jedem
+    /// Neuzeichnen einen Prozess und blockierte den Hauptthread mitten im
+    /// Bildaufbau - die Oberfläche hinkte dadurch eine Aktualisierung hinterher.
+    static let version: String = {
         guard let url = executableURL else { return "fehlt" }
         let p = Process()
         p.executableURL = url
@@ -28,7 +31,7 @@ enum Ghostscript {
         p.waitUntilExit()
         return String(data: data, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? "?"
-    }
+    }()
 
     // MARK: - Qualität
 

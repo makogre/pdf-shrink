@@ -57,7 +57,8 @@ struct ContentView: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
-            Picker("", selection: $store.lang) {
+            Picker("", selection: Binding(get: { store.lang },
+                                          set: { store.setLang($0) })) {
                 ForEach(Lang.allCases) { Text($0.short).tag($0) }
             }
             .pickerStyle(.segmented)

@@ -56,8 +56,13 @@ final class Store: ObservableObject {
     @Published var items: [FileItem] = []
     @Published var settings = Settings()
     /// Oberflächensprache; die Wahl überlebt den Neustart.
-    @Published var lang: Lang = .initial {
-        didSet { UserDefaults.standard.set(lang.rawValue, forKey: "language") }
+    /// Kein didSet am @Published-Wert: das Speichern erledigt setLang(_:).
+    @Published private(set) var lang: Lang = .initial
+
+    func setLang(_ new: Lang) {
+        guard new != lang else { return }
+        lang = new
+        UserDefaults.standard.set(new.rawValue, forKey: "language")
     }
     /// Alle sichtbaren Texte der aktuellen Sprache.
     var s: Strings { lang.strings }

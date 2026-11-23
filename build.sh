@@ -33,8 +33,8 @@ cat > "$PLIST" <<'PL'
   <key>CFBundleName</key><string>PDF Shrink</string>
   <key>CFBundleDisplayName</key><string>PDF Shrink</string>
   <key>CFBundleIdentifier</key><string>local.pdfshrink.native</string>
-  <key>CFBundleVersion</key><string>1.1</string>
-  <key>CFBundleShortVersionString</key><string>1.1</string>
+  <key>CFBundleVersion</key><string>1.1.1</string>
+  <key>CFBundleShortVersionString</key><string>1.1.1</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>PDF Shrink</string>
   <key>CFBundleIconFile</key><string>app</string>
