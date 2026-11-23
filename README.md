@@ -140,8 +140,7 @@ Download the app from [Releases](../../releases), unzip it, then:
    the app sits in your downloads folder macOS does not know it properly, and
    PDFs dropped onto its icon may not arrive.
 
-2. **Remove the quarantine flag.** The app is not registered with Apple (that
-   costs €99/year), so macOS blocks it at first, claiming it is damaged. In
+2. **Remove the quarantine flag.** The app is not registered with Apple, so macOS blocks it at first, claiming it is damaged. In
    Terminal:
 
    ```
