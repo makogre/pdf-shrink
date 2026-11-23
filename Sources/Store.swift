@@ -5,7 +5,7 @@ import SwiftUI
 @MainActor
 final class FileItem: ObservableObject, Identifiable {
     enum State: Equatable {
-        case queued, running, done, failed(String)
+        case queued, running, done, failed(Failure)
         var isBusy: Bool { self == .queued || self == .running }
     }
 
@@ -55,6 +55,12 @@ final class FileItem: ObservableObject, Identifiable {
 final class Store: ObservableObject {
     @Published var items: [FileItem] = []
     @Published var settings = Settings()
+    /// Oberflächensprache; die Wahl überlebt den Neustart.
+    @Published var lang: Lang = .initial {
+        didSet { UserDefaults.standard.set(lang.rawValue, forKey: "language") }
+    }
+    /// Alle sichtbaren Texte der aktuellen Sprache.
+    var s: Strings { lang.strings }
     /// Ergebnis sofort neben das Original legen, ohne Nachfrage.
     @Published var autoSave = false
 
@@ -130,18 +136,17 @@ final class Store: ObservableObject {
 
         // Vorab prüfen: lesbar? verschlüsselt? wie viele Seiten?
         guard FileManager.default.isReadableFile(atPath: item.url.path) else {
-            item.state = .failed("macOS verweigert den Zugriff auf diese Datei. Erlaube den "
-                + "Zugriff unter Systemeinstellungen → Datenschutz & Sicherheit → Dateien und Ordner.")
+            item.state = .failed(.noAccess)
             return
         }
         if let doc = PDFDocument(url: item.url) {
             item.pages = doc.pageCount
             if doc.isLocked {
-                item.state = .failed("Die Datei ist passwortgeschützt und kann nicht verarbeitet werden.")
+                item.state = .failed(.passwordProtected)
                 return
             }
         } else {
-            item.state = .failed("Die Datei konnte nicht als PDF gelesen werden.")
+            item.state = .failed(.notReadablePDF)
             return
         }
 
@@ -161,7 +166,7 @@ final class Store: ObservableObject {
 
             let size = (try? FileManager.default.attributesOfItem(atPath: output.path)[.size] as? Int64) ?? nil
             guard let produced = size else {
-                item.state = .failed("Ghostscript hat keine Ausgabedatei erzeugt.")
+                item.state = .failed(.noOutput)
                 return
             }
 
@@ -179,9 +184,10 @@ final class Store: ObservableObject {
             item.page = item.pages
             item.state = .done
             if autoSave { _ = saveNextToOriginal(item) }
+        } catch let failure as Failure {
+            item.state = .failed(failure)
         } catch {
-            item.state = .failed((error as? LocalizedError)?.errorDescription
-                                 ?? error.localizedDescription)
+            item.state = .failed(.gsFailed(code: -1, detail: error.localizedDescription))
         }
         item.run = nil
     }
@@ -198,7 +204,7 @@ final class Store: ObservableObject {
             item.savedURL = dest
             return dest
         } catch {
-            item.state = .failed("Speichern fehlgeschlagen: \(error.localizedDescription)")
+            item.state = .failed(.saveFailed(error.localizedDescription))
             return nil
         }
     }
@@ -212,7 +218,7 @@ final class Store: ObservableObject {
             try FileManager.default.copyItem(at: src, to: dest)
             item.savedURL = dest
         } catch {
-            item.state = .failed("Speichern fehlgeschlagen: \(error.localizedDescription)")
+            item.state = .failed(.saveFailed(error.localizedDescription))
         }
     }
 

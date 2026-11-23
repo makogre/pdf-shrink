@@ -27,7 +27,7 @@ final class GSRun: @unchecked Sendable {
     /// Prozess übernehmen; wirft, wenn zwischenzeitlich abgebrochen wurde.
     private func adopt(_ proc: Process) throws {
         try withLock {
-            if cancelled { throw GSError.cancelled }
+            if cancelled { throw Failure.cancelled }
             process = proc
         }
     }
@@ -38,7 +38,7 @@ final class GSRun: @unchecked Sendable {
              onTotal: @escaping @Sendable (Int) -> Void,
              onPage: @escaping @Sendable (Int) -> Void) async throws {
 
-        guard let gs = Ghostscript.executableURL else { throw GSError.notInstalled }
+        guard let gs = Ghostscript.executableURL else { throw Failure.ghostscriptMissing }
 
         let proc = Process()
         proc.executableURL = gs
@@ -70,10 +70,10 @@ final class GSRun: @unchecked Sendable {
                 if !rest.isEmpty { tail.feed(rest) { _ in } }
 
                 if p.terminationReason == .uncaughtSignal {
-                    cont.resume(throwing: GSError.cancelled)
+                    cont.resume(throwing: Failure.cancelled)
                 } else if p.terminationStatus != 0 {
-                    cont.resume(throwing: GSError.failed(code: p.terminationStatus,
-                                                         detail: tail.summary()))
+                    cont.resume(throwing: Failure.gsFailed(code: p.terminationStatus,
+                                                           detail: tail.summary()))
                 } else {
                     cont.resume()
                 }

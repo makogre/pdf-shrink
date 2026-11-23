@@ -4,6 +4,8 @@ import PDFKit
 /// Seite vorher/nachher nebeneinander — zum Prüfen, ob die Stufe passt.
 struct CompareView: View {
     let item: FileItem
+    @EnvironmentObject var store: Store
+    private var s: Strings { store.s }
     @Environment(\.dismiss) private var dismiss
     @State private var page = 1
     @State private var before: NSImage?
@@ -19,18 +21,18 @@ struct CompareView: View {
                 Spacer()
                 Button { step(-1) } label: { Image(systemName: "chevron.left") }
                     .disabled(page <= 1)
-                Text("Seite \(page) / \(pageCount)")
+                Text(s.pageOf(page, pageCount))
                     .font(.system(size: 11)).monospacedDigit()
                 Button { step(1) } label: { Image(systemName: "chevron.right") }
                     .disabled(page >= pageCount)
-                Button("Schließen") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(s.close) { dismiss() }.keyboardShortcut(.cancelAction)
             }
             .padding(12)
             Divider()
 
             HStack(spacing: 12) {
-                pane("Original", Fmt.bytes(item.originalSize), before)
-                pane("Komprimiert", Fmt.bytes(item.newSize), after)
+                pane(s.original, s.bytes(item.originalSize), before)
+                pane(s.compressed, s.bytes(item.newSize), after)
             }
             .padding(12)
         }

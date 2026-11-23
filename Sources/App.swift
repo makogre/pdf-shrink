@@ -15,7 +15,7 @@ struct PDFShrinkApp: App {
                 .onAppear {
                     delegate.store = store
                     delegate.flushPending()
-                    warnIfGhostscriptMissing()
+                    warnIfGhostscriptMissing(store.s)
                 }
         }
         .windowResizability(.contentMinSize)
@@ -23,19 +23,18 @@ struct PDFShrinkApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .newItem) {
-                Button("PDFs hinzufügen …") { delegate.openPanel() }
+                Button(store.s.addFiles) { delegate.openPanel() }
                     .keyboardShortcut("o")
             }
         }
     }
 
-    private func warnIfGhostscriptMissing() {
+    private func warnIfGhostscriptMissing(_ s: Strings) {
         guard Ghostscript.executableURL == nil else { return }
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "Ghostscript fehlt"
-        alert.informativeText = "PDF Shrink nutzt Ghostscript zum Komprimieren.\n\n"
-            + "Im Terminal installieren:\n\nbrew install ghostscript"
+        alert.messageText = s.gsAlertTitle
+        alert.informativeText = s.gsAlertBody
         alert.addButton(withTitle: "OK")
         alert.runModal()
     }
@@ -68,6 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.pdf]
+        panel.prompt = store?.s.addPanelPrompt ?? "Add"
         if panel.runModal() == .OK { store?.add(urls: panel.urls) }
     }
 }

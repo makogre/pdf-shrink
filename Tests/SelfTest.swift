@@ -14,6 +14,34 @@ import Foundation
         check("gs gefunden", Ghostscript.executableURL != nil,
               Ghostscript.executableURL?.path ?? "")
 
+        // Sprachen: der Compiler erzwingt Vollständigkeit, nicht aber Inhalt.
+        var langIssues: [String] = []
+        for id in PresetID.allCases {
+            for (name, t) in [("de", Strings.de), ("en", Strings.en)] {
+                if t.presetLabel(id).isEmpty { langIssues.append("\(name): Label \(id.rawValue) leer") }
+                if t.presetHint(id).isEmpty  { langIssues.append("\(name): Hinweis \(id.rawValue) leer") }
+            }
+            if Strings.de.presetLabel(id) == Strings.en.presetLabel(id) && id != .balanced {
+                langIssues.append("Label \(id.rawValue) in beiden Sprachen gleich")
+            }
+        }
+        for t in [Strings.de, Strings.en] {
+            if t.subtitle.isEmpty || t.dropFirst.isEmpty || t.close.isEmpty {
+                langIssues.append("\(t.lang.rawValue): Pflichttext leer")
+            }
+            for f: Failure in [.ghostscriptMissing, .cancelled, .noAccess, .passwordProtected,
+                               .notReadablePDF, .noOutput, .gsFailed(code: 1, detail: ""),
+                               .saveFailed("x")] where t.failure(f).isEmpty {
+                langIssues.append("\(t.lang.rawValue): Fehlertext leer")
+            }
+        }
+        check("Sprachtabellen vollständig", langIssues.isEmpty, langIssues.joined(separator: "; "))
+
+        // Größenangaben folgen der Sprache
+        check("Zahlformat je Sprache",
+              Strings.de.bytes(14_500_000).contains(",") && Strings.en.bytes(14_500_000).contains("."),
+              "de=\(Strings.de.bytes(14_500_000))  en=\(Strings.en.bytes(14_500_000))")
+
         // QFactor: muss monoton fallen, wenn die Qualität steigt
         let qs = [10, 35, 55, 72, 85, 98]
         let fs = qs.map { Ghostscript.qFactor(for: $0) }
@@ -21,7 +49,7 @@ import Foundation
               fs.map { String(format: "%.2f", $0) }.joined(separator: " > "))
 
         // JPEGQ darf nicht vorkommen (pdfwrite ignoriert es), QFactor muss drin sein
-        var s = Settings(); s.apply(Preset.named("strong"))
+        var s = Settings(); s.apply(Preset.named(.strong))
         let args = Ghostscript.arguments(settings: s, input: input,
                                          output: URL(fileURLWithPath: "/tmp/o.pdf"))
         check("kein -dJPEGQ", !args.contains { $0.contains("JPEGQ") })
@@ -31,7 +59,7 @@ import Foundation
         check("Eingabe steht am Ende", args.last == input.path)
 
         // "Nur optimieren" darf keine Bildfilter erzwingen
-        var o = Settings(); o.apply(Preset.named("optimize"))
+        var o = Settings(); o.apply(Preset.named(.optimize))
         let oargs = Ghostscript.arguments(settings: o, input: input,
                                           output: URL(fileURLWithPath: "/tmp/o.pdf"))
         check("optimize ohne QFactor", !oargs.contains { $0.contains("/QFactor") })
@@ -42,7 +70,7 @@ import Foundation
         for preset in Preset.all {
             var st = Settings(); st.apply(preset)
             let out = URL(fileURLWithPath: NSTemporaryDirectory())
-                .appendingPathComponent("st-\(preset.id).pdf")
+                .appendingPathComponent("st-\(preset.id.rawValue).pdf")
             let run = GSRun()
             let pages = Counter(), lastPage = Counter()
             do {
@@ -51,7 +79,7 @@ import Foundation
                                   onTotal: { pages.set($0) }, onPage: { lastPage.set($0) })
                 let after = fileSize(out)
                 let pct = Int((1 - Double(after) / Double(before)) * 100)
-                check("Stufe \(preset.id)", after > 0,
+                check("Stufe \(preset.id.rawValue)", after > 0,
                       "\(before/1024) KB → \(after/1024) KB (−\(pct)%), "
                       + "\(lastPage.value)/\(pages.value) Seiten, "
                       + String(format: "%.2fs", Date().timeIntervalSince(t0)))
@@ -60,12 +88,12 @@ import Foundation
                           "Seite \(lastPage.value) von \(pages.value)")
                 }
             } catch {
-                check("Stufe \(preset.id)", false, error.localizedDescription)
+                check("Stufe \(preset.id.rawValue)", false, Strings.de.failure(error as? Failure ?? .cancelled))
             }
         }
 
         // Abbruch muss greifen
-        var c = Settings(); c.apply(Preset.named("light"))
+        var c = Settings(); c.apply(Preset.named(.light))
         let cancelRun = GSRun()
         let cout = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("cancel.pdf")
         Task { try? await Task.sleep(nanoseconds: 30_000_000); cancelRun.cancel() }
@@ -74,7 +102,7 @@ import Foundation
                                     onTotal: { _ in }, onPage: { _ in })
             check("Abbruch", false, "lief komplett durch (Datei evtl. zu klein zum Abbrechen)")
         } catch {
-            check("Abbruch", true, error.localizedDescription)
+            check("Abbruch", true, Strings.de.failure(error as? Failure ?? .cancelled))
         }
 
         // Fehlerfall: kaputte Datei
@@ -87,7 +115,7 @@ import Foundation
             check("defekte Datei meldet Fehler", false, "kein Fehler geworfen")
         } catch {
             check("defekte Datei meldet Fehler", true,
-                  String(error.localizedDescription.prefix(70)))
+                  String(Strings.de.failure(error as? Failure ?? .cancelled).prefix(70)))
         }
 
         print(failures == 0 ? "\nalle Prüfungen bestanden" : "\n\(failures) Prüfung(en) fehlgeschlagen")

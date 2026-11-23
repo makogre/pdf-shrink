@@ -8,5 +8,6 @@ SDK="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
 BIN="$(mktemp -d)/selftest"
 env -u SDKROOT xcrun swiftc -swift-version 5 -parse-as-library -sdk "$SDK" \
   -target arm64-apple-macos14.0 -o "$BIN" \
-  Sources/Models.swift Sources/Ghostscript.swift Sources/Runner.swift Tests/SelfTest.swift
+  Sources/Models.swift Sources/Strings.swift Sources/Ghostscript.swift \
+  Sources/Runner.swift Tests/SelfTest.swift
 "$BIN" "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"

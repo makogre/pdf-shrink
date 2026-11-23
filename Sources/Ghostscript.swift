@@ -1,26 +1,5 @@
 import Foundation
 
-enum GSError: LocalizedError {
-    case notInstalled
-    case failed(code: Int32, detail: String)
-    case cancelled
-    case unreadable(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .notInstalled:
-            return "Ghostscript wurde nicht gefunden. Im Terminal installieren: brew install ghostscript"
-        case .failed(let code, let detail):
-            return detail.isEmpty ? "Ghostscript-Fehler (Code \(code))"
-                                  : "Ghostscript-Fehler (Code \(code)): \(detail)"
-        case .cancelled:
-            return "Abgebrochen"
-        case .unreadable(let why):
-            return why
-        }
-    }
-}
-
 enum Ghostscript {
 
     /// Pfad zum gs-Binary. Eine GUI-App erbt die PATH-Variable der Shell nicht,

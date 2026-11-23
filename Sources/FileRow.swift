@@ -4,6 +4,7 @@ import AppKit
 struct FileRow: View {
     @ObservedObject var item: FileItem
     @EnvironmentObject var store: Store
+    private var s: Strings { store.s }
     let compare: (FileItem) -> Void
 
     var body: some View {
@@ -14,7 +15,7 @@ struct FileRow: View {
                     .lineLimit(1).truncationMode(.middle)
                 Spacer()
                 if case .done = item.state {
-                    Text(Fmt.percent(item.savedFraction))
+                    Text(s.percent(item.savedFraction))
                         .font(.system(size: 12.5, weight: .semibold)).monospacedDigit()
                         .foregroundStyle(item.savedFraction >= 0.1 ? Color.green : Color.orange)
                 }
@@ -24,7 +25,7 @@ struct FileRow: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .help("Aus der Liste entfernen")
+                .help(s.removeFromList)
             }
 
             ProgressView(value: item.progress)
@@ -36,16 +37,15 @@ struct FileRow: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if item.usedOriginal {
-                Text("Neu geschrieben wäre die Datei größer geworden — du bekommst das "
-                   + "unveränderte Original. Mit einer stärkeren Stufe lässt sich meist noch sparen.")
+                Text(s.grewWarning)
                     .font(.system(size: 11)).foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let saved = item.savedURL {
                 HStack(spacing: 5) {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    Text("Gespeichert: \(saved.path)").lineLimit(1).truncationMode(.middle)
-                    Button("Im Finder zeigen") {
+                    Text(s.savedAs(saved.path)).lineLimit(1).truncationMode(.middle)
+                    Button(s.showInFinder) {
                         NSWorkspace.shared.activateFileViewerSelecting([saved])
                     }
                     .buttonStyle(.link)
@@ -63,23 +63,23 @@ struct FileRow: View {
         switch item.state {
         case .done:
             HStack(spacing: 7) {
-                Button("Neben Original speichern") { store.saveNextToOriginal(item) }
+                Button(s.saveNextToOriginal) { store.saveNextToOriginal(item) }
                     .disabled(item.savedURL != nil)
-                Button("Speichern unter …") { saveAs() }
-                Button("Qualität vergleichen") { compare(item) }
-                Button("Neu komprimieren") { store.enqueue(item) }
+                Button(s.saveAs) { saveAs() }
+                Button(s.compareQuality) { compare(item) }
+                Button(s.recompress) { store.enqueue(item) }
             }
             .controlSize(.small)
         case .failed:
             HStack(spacing: 7) {
-                Button("Erneut versuchen") { store.enqueue(item) }
-                Button("Im Finder zeigen") {
+                Button(s.retry) { store.enqueue(item) }
+                Button(s.showInFinder) {
                     NSWorkspace.shared.activateFileViewerSelecting([item.url])
                 }
             }
             .controlSize(.small)
         case .running, .queued:
-            Button("Abbrechen") { item.run?.cancel() }
+            Button(s.cancel) { item.run?.cancel() }
                 .controlSize(.small)
         }
     }
@@ -97,18 +97,19 @@ struct FileRow: View {
     private var status: String {
         switch item.state {
         case .queued:
-            return "In Warteschlange · \(Fmt.bytes(item.originalSize))"
+            return s.queued(s.bytes(item.originalSize))
         case .running:
             return item.pages > 0
-                ? "Komprimiere Seite \(max(item.page, 1)) von \(item.pages) …"
-                : "Analysiere Dokument …"
+                ? s.compressingPage(max(item.page, 1), item.pages)
+                : s.analyzing
         case .done:
             let saved = item.originalSize - (item.newSize ?? item.originalSize)
-            let head = "\(Fmt.bytes(item.originalSize)) → \(Fmt.bytes(item.newSize))"
-            return saved > 0 ? head + "  ·  \(Fmt.bytes(saved)) gespart"
-                             : head + "  ·  keine Ersparnis"
-        case .failed(let msg):
-            return msg
+            let before = s.bytes(item.originalSize)
+            let after = s.bytes(item.newSize)
+            return saved > 0 ? s.resultLine(before, after, s.bytes(saved))
+                             : s.resultNoGain(before, after)
+        case .failed(let failure):
+            return s.failure(failure)
         }
     }
 

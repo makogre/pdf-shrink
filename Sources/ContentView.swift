@@ -4,6 +4,7 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var store: Store
+    private var s: Strings { store.s }
     @State private var isTargeted = false
     @State private var showAdvanced = false
     @State private var comparing: FileItem?
@@ -42,7 +43,7 @@ struct ContentView: View {
                     .ignoresSafeArea()
             }
         }
-        .sheet(item: $comparing) { CompareView(item: $0) }
+        .sheet(item: $comparing) { CompareView(item: $0).environmentObject(store) }
     }
 
     // MARK: - Kopfzeile
@@ -52,12 +53,20 @@ struct ContentView: View {
             AppMark()
             VStack(alignment: .leading, spacing: 1) {
                 Text("PDF Shrink").font(.system(size: 15, weight: .semibold))
-                Text("PDFs verkleinern — reinziehen, Stufe wählen, fertig")
+                Text(s.subtitle)
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
-            Text(Ghostscript.executableURL == nil ? "Ghostscript fehlt"
-                                                  : "Ghostscript \(Ghostscript.version)")
+            Picker("", selection: $store.lang) {
+                ForEach(Lang.allCases) { Text($0.short).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 84)
+            .help(store.lang == .de ? "Sprache der Oberfläche" : "Interface language")
+
+            Text(Ghostscript.executableURL == nil ? s.ghostscriptMissingChip
+                                                  : s.gsVersion(Ghostscript.version))
                 .font(.system(size: 10))
                 .foregroundStyle(Ghostscript.executableURL == nil ? .red : .secondary)
                 .padding(.horizontal, 8).padding(.vertical, 3)
@@ -74,10 +83,10 @@ struct ContentView: View {
                 Image(systemName: "arrow.down.doc")
                     .font(.system(size: store.items.isEmpty ? 26 : 16, weight: .light))
                     .foregroundStyle(.secondary)
-                Text(store.items.isEmpty ? "PDFs hierher ziehen" : "Weitere PDFs hierher ziehen")
+                Text(store.items.isEmpty ? s.dropFirst : s.dropMore)
                     .font(.system(size: store.items.isEmpty ? 14 : 12, weight: .medium))
                 if store.items.isEmpty {
-                    Text("oder klicken, um Dateien zu wählen · mehrere gleichzeitig möglich")
+                    Text(s.dropHint)
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
@@ -98,13 +107,14 @@ struct ContentView: View {
 
     private var settingsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("KOMPRESSIONSSTUFE")
+            Text(s.compressionLevel)
                 .font(.system(size: 10, weight: .semibold)).tracking(0.6)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 6) {
                 ForEach(Preset.all) { preset in
-                    PresetButton(preset: preset,
+                    PresetButton(label: s.presetLabel(preset.id),
+                                 hint: s.presetHint(preset.id),
                                  selected: store.settings.presetID == preset.id) {
                         store.settings.apply(preset)
                     }
@@ -114,11 +124,11 @@ struct ContentView: View {
             DisclosureGroup(isExpanded: $showAdvanced) {
                 advanced.padding(.top, 10)
             } label: {
-                Text("Erweiterte Einstellungen")
+                Text(s.advanced)
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
 
-            Toggle("Ergebnis sofort neben dem Original speichern", isOn: $store.autoSave)
+            Toggle(s.autoSave, isOn: $store.autoSave)
                 .font(.system(size: 12))
                 .toggleStyle(.checkbox)
         }
@@ -130,23 +140,23 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             let editable = store.settings.isCustomisable
 
-            slider("Bildauflösung (Farbe / Graustufen)",
+            slider(s.imageResolution,
                    value: Binding(get: { Double(store.settings.dpi) },
                                   set: { store.settings.dpi = Int($0) }),
                    range: 36...600, step: 6, suffix: "dpi", enabled: editable)
 
-            slider("JPEG-Qualität",
+            slider(s.jpegQuality,
                    value: Binding(get: { Double(store.settings.quality) },
                                   set: { store.settings.quality = Int($0) }),
                    range: 10...98, step: 1, suffix: "", enabled: editable)
 
-            slider("Auflösung Schwarz-Weiß-Bilder",
+            slider(s.monoResolution,
                    value: Binding(get: { Double(store.settings.monoDPI) },
                                   set: { store.settings.monoDPI = Int($0) }),
                    range: 150...1800, step: 50, suffix: "dpi", enabled: editable)
 
             HStack(spacing: 14) {
-                Picker("PDF-Version", selection: $store.settings.pdfVersion) {
+                Picker(s.pdfVersion, selection: $store.settings.pdfVersion) {
                     ForEach(Settings.pdfVersions, id: \.self) { Text($0).tag($0) }
                 }
                 .frame(width: 190)
@@ -155,16 +165,14 @@ struct ContentView: View {
             .font(.system(size: 12))
 
             HStack(spacing: 18) {
-                Toggle("Graustufen", isOn: $store.settings.grayscale)
-                Toggle("Metadaten entfernen", isOn: $store.settings.stripMetadata)
-                Toggle("Für Web optimieren", isOn: $store.settings.fastWeb)
+                Toggle(s.grayscale, isOn: $store.settings.grayscale)
+                Toggle(s.stripMetadata, isOn: $store.settings.stripMetadata)
+                Toggle(s.fastWeb, isOn: $store.settings.fastWeb)
             }
             .font(.system(size: 12))
             .toggleStyle(.checkbox)
 
-            Text("Bei „Nur optimieren“ bleiben Bilder unangetastet — Auflösung und JPEG-Qualität "
-               + "werden dann ignoriert. „Für Web optimieren“ erlaubt keine Objekt-Streams und "
-               + "kann die Datei leicht vergrößern.")
+            Text(s.advancedNote)
                 .font(.system(size: 10.5)).foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -191,21 +199,23 @@ struct ContentView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            Button("Alle neben Originalen speichern") {
+            Button(s.saveAllNextToOriginals) {
                 for item in store.finished where item.savedURL == nil {
                     store.saveNextToOriginal(item)
                 }
             }
             .keyboardShortcut("s")
 
-            Button("Mit neuen Einstellungen erneut") { store.recompressAll() }
-            Button("Liste leeren") { store.clearFinished() }
+            Button(s.recompressAll) { store.recompressAll() }
+            Button(s.clearList) { store.clearFinished() }
 
             Spacer()
 
-            Text("\(store.finished.count) fertig · \(Fmt.bytes(store.totalBefore)) → "
-               + "\(Fmt.bytes(store.totalAfter)) "
-               + "(\(Fmt.percent(Fmt.savedFraction(from: store.totalBefore, to: store.totalAfter))))")
+            Text(s.totals(store.finished.count,
+                          s.bytes(store.totalBefore),
+                          s.bytes(store.totalAfter),
+                          s.percent(Fmt.savedFraction(from: store.totalBefore,
+                                                      to: store.totalAfter))))
                 .font(.system(size: 11)).monospacedDigit().foregroundStyle(.secondary)
         }
         .padding(.horizontal, 16).padding(.vertical, 10)
@@ -227,7 +237,7 @@ struct ContentView: View {
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.allowedContentTypes = [.pdf]
-        panel.prompt = "Hinzufügen"
+        panel.prompt = s.addPanelPrompt
         if panel.runModal() == .OK { store.add(urls: panel.urls) }
     }
 }
@@ -247,15 +257,16 @@ struct AppMark: View {
 }
 
 struct PresetButton: View {
-    let preset: Preset
+    let label: String
+    let hint: String
     let selected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: 1) {
-                Text(preset.label).font(.system(size: 12, weight: .semibold))
-                Text(preset.hint).font(.system(size: 9.5))
+                Text(label).font(.system(size: 12, weight: .semibold))
+                Text(hint).font(.system(size: 9.5))
                     .foregroundStyle(selected ? Color.white.opacity(0.85) : Color.secondary)
             }
             .frame(maxWidth: .infinity)
