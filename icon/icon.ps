@@ -1,0 +1,42 @@
+%!PS
+% App-Icon: entspricht dem Logo in der Kopfzeile der Oberflaeche
+% (abgerundetes Quadrat, Verlauf #3f5efb -> #8b5cf6, weisser "PDF"-Schriftzug).
+<< /PageSize [1024 1024] >> setpagedevice
+
+/x 72 def /y 72 def /w 880 def /h 880 def
+/r 245 def                      % 10/36 des Kantenmasses wie .logo{border-radius}
+
+/rr {
+  newpath
+  x r add y moveto
+  x w add r sub y lineto
+  x w add r sub  y r add  r  -90 0 arc
+  x w add  y h add r sub lineto
+  x w add r sub  y h add r sub  r  0 90 arc
+  x r add  y h add lineto
+  x r add  y h add r sub  r  90 180 arc
+  x  y r add lineto
+  x r add  y r add  r  180 270 arc
+  closepath
+} def
+
+gsave rr clip
+  << /ShadingType 2 /ColorSpace /DeviceRGB
+     /Coords [72 952 952 72] /Extend [true true]
+     /Function << /FunctionType 2 /Domain [0 1] /N 1
+                  /C0 [0.247 0.369 0.984]      % #3f5efb
+                  /C1 [0.545 0.361 0.965] >>   % #8b5cf6
+  >> shfill
+grestore
+
+% Schriftzug "PDF", zentriert, mit der negativen Laufweite der Seite (-0.0308 em)
+/txt (PDF) def
+/fs 318 def
+/trk fs -0.0308 mul def
+/Helvetica-Bold findfont fs scalefont setfont
+/tw txt stringwidth pop trk 2 mul add def
+/capy fs 0.718 mul def
+1 1 1 setrgbcolor
+1024 tw sub 2 div   1024 capy sub 2 div   moveto
+trk 0 txt ashow
+showpage

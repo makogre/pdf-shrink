@@ -1,0 +1,6 @@
+# Build-Ergebnisse — werden mit ./build.sh bzw. ./release.sh erzeugt
+PDF Shrink.app/
+dist/
+
+# macOS
+.DS_Store
