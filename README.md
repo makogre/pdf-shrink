@@ -31,8 +31,7 @@ Fertige App unter [Releases](../../releases) herunterladen, entpacken, dann:
    starten — solange die App im Download-Ordner liegt, kennt macOS sie noch
    nicht richtig und aufs Icon gezogene PDFs kommen unter Umständen nicht an.
 
-2. **Quarantäne entfernen.** Die App ist nicht bei Apple registriert
-   (das kostet 99 €/Jahr), deshalb blockiert macOS sie zunächst mit der
+2. **Quarantäne entfernen.** Die App ist nicht bei Apple registriert, deshalb blockiert macOS sie zunächst mit der
    Meldung, sie sei beschädigt. Im Terminal:
 
    ```
