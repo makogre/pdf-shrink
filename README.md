@@ -18,9 +18,7 @@ Native macOS-App zum Verkleinern von PDF-Dateien. PDFs ins Fenster oder aufs
 Dock-Icon ziehen, Kompressionsstufe wählen, fertig — kein Browser, kein Upload,
 keine Cloud. Alles läuft lokal.
 
-Komprimiert wird mit [Ghostscript](https://www.ghostscript.com), also mit
-denselben Hebeln, die auch PDF-XChange Editor unter *Dateigröße reduzieren*
-anbietet: Bild-Downsampling, JPEG-Requantisierung, Font-Subsetting,
+Komprimiert wird mit [Ghostscript](https://www.ghostscript.com): Bild-Downsampling, JPEG-Requantisierung, Font-Subsetting,
 Duplikat-Erkennung, Metadaten entfernen.
 
 ### Installation
@@ -127,8 +125,7 @@ Native macOS app for shrinking PDF files. Drop PDFs into the window or onto the
 dock icon, pick a compression level, done — no browser, no upload, no cloud.
 Everything runs locally.
 
-Compression is done by [Ghostscript](https://www.ghostscript.com), using the
-same levers that PDF-XChange Editor offers under *Reduce File Size*: image
+Compression is done by [Ghostscript](https://www.ghostscript.com): image
 downsampling, JPEG requantisation, font subsetting, duplicate detection,
 metadata removal.
 
